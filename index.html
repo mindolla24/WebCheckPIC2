@@ -195,7 +195,7 @@
         status.textContent = "⏳ Đang tải dữ liệu...";
 
         // 🔹 Dành cho bản test trong VSCode (local)
-        const res = await fetch("./data.txt");
+        const res = await fetch("https://mindolla24.github.io/WebCheckPIC2/data.txt?ver=" + Date.now());
         const json = await res.json();
 
         // File là mảng gốc (không có json.data)
@@ -272,3 +272,4 @@
   </script>
 </body>
 </html>
+
