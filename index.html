@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tra PIC phụ trách nguyên vật liệu</title>
   <style>
     :root {
@@ -29,25 +29,22 @@
       border-radius: 24px;
       background: var(--glass-bg);
       backdrop-filter: blur(var(--blur-amount));
-      -webkit-backdrop-filter: blur(var(--blur-amount));
       border: 1px solid var(--border-glass);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
       text-align: center;
       transition: 0.4s ease;
     }
 
     .container:hover {
       transform: translateY(-3px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
     }
 
     .header {
       font-size: 22px;
       font-weight: 600;
-      letter-spacing: 0.3px;
       color: #1d1d1f;
       margin-bottom: 28px;
-      text-shadow: 0 1px 2px rgba(255,255,255,0.3);
     }
 
     .search-box {
@@ -61,18 +58,18 @@
     input {
       flex: 1;
       padding: 14px 18px;
-      border: 1px solid rgba(255,255,255,0.6);
+      border: 1px solid rgba(255, 255, 255, 0.6);
       border-radius: 999px;
       font-size: 16px;
       outline: none;
-      background: rgba(255,255,255,0.8);
+      background: rgba(255, 255, 255, 0.8);
       transition: 0.2s ease;
     }
 
     input:focus {
-      background: rgba(255,255,255,0.95);
+      background: rgba(255, 255, 255, 0.95);
       border-color: var(--apple-red);
-      box-shadow: 0 0 0 4px rgba(208,0,0,0.08);
+      box-shadow: 0 0 0 4px rgba(208, 0, 0, 0.08);
     }
 
     button {
@@ -100,6 +97,7 @@
 
     #status.ready b { color: var(--green); }
     #status.loading { color: #ff8c00; }
+    #status.error { color: #d00000; }
 
     .flash {
       animation: flashFade 0.8s ease;
@@ -117,14 +115,11 @@
       right: 0;
       background: rgba(255, 255, 255, 0.9);
       border-radius: 16px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-      overflow: hidden;
-      max-height: 200px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
       overflow-y: auto;
+      max-height: 200px;
       text-align: left;
       z-index: 100;
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.4);
     }
 
     .suggestion-item {
@@ -135,9 +130,7 @@
       transition: 0.2s;
     }
 
-    .suggestion-item:hover {
-      background: rgba(240,240,240,0.7);
-    }
+    .suggestion-item:hover { background: rgba(240, 240, 240, 0.7); }
 
     #results {
       margin-top: 28px;
@@ -148,17 +141,10 @@
     .card {
       background: rgba(255, 255, 255, 0.7);
       backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
       border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.4);
+      border: 1px solid rgba(255, 255, 255, 0.4);
       padding: 22px 26px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      transition: 0.3s;
-    }
-
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 14px 40px rgba(0,0,0,0.15);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     }
 
     .card p {
@@ -167,9 +153,7 @@
       color: #2e2e2e;
     }
 
-    .card strong {
-      color: var(--apple-red);
-    }
+    .card strong { color: var(--apple-red); }
 
     footer {
       margin-top: 24px;
@@ -189,7 +173,7 @@
     <div class="header">Tra PIC phụ trách nguyên vật liệu</div>
 
     <div class="search-box">
-      <input type="text" id="searchBox" placeholder="Nhập code hoặc tên nguyên vật liệu...">
+      <input type="text" id="searchBox" placeholder="Nhập code hoặc tên nguyên vật liệu..." />
       <button id="btnSearch">Tìm</button>
       <div id="suggestions"></div>
     </div>
@@ -203,47 +187,49 @@
   <script>
     let allData = [];
 
-    // 🔹 Tải JSON từ GitHub + cập nhật thời gian
+    // === Load JSON từ file data.txt ===
     async function loadData() {
       const status = document.getElementById("status");
       try {
-        status.innerHTML = "⏳ Đang tải dữ liệu...";
         status.className = "loading";
+        status.textContent = "⏳ Đang tải dữ liệu...";
 
-        const res = await fetch(`https://raw.githubusercontent.com/mindolla24/WebCheckPIC2/main/AutoUpdatePIC.json?ver=${Date.now()}`);
-        const jsonData = await res.json();
+        // 🔹 Dành cho bản test trong VSCode (local)
+        const res = await fetch("./data.txt");
+        const json = await res.json();
 
-        allData = jsonData.data || jsonData;
+        // File là mảng gốc (không có json.data)
+        allData = Array.isArray(json) ? json : json.data;
 
-        const lastUpdated = jsonData.last_updated
-          ? new Date(jsonData.last_updated).toLocaleString("vi-VN", { hour12: false })
-          : "Không xác định";
-
-        status.innerHTML = `<b>Dữ liệu đã sẵn sàng</b><br><span style="font-size: 12px; color: #666;">Cập nhật lần cuối: ${lastUpdated}</span>`;
         status.className = "ready flash";
+        status.innerHTML = `<b>Dữ liệu đã sẵn sàng</b><br><span style="font-size:12px;color:#666;">Cập nhật lần cuối: ${new Date().toLocaleString("vi-VN")}</span>`;
         setTimeout(() => status.classList.remove("flash"), 800);
+
       } catch (err) {
-        console.error("❌ Lỗi tải dữ liệu:", err);
-        status.textContent = "❌ Không thể tải dữ liệu.";
-        status.className = "";
+        console.error(err);
+        status.className = "error";
+        status.textContent = "❌ Không thể tải dữ liệu (data.txt không đúng định dạng hoặc không tìm thấy).";
       }
     }
 
     loadData();
+    setInterval(loadData, 60000); // reload mỗi 60s
 
     const input = document.getElementById("searchBox");
     const resultsBox = document.getElementById("results");
     const suggestions = document.getElementById("suggestions");
 
-    input?.addEventListener("input", () => {
+    input.addEventListener("input", () => {
       const keyword = input.value.trim().toLowerCase();
       suggestions.innerHTML = "";
       if (!keyword) return;
 
-      const filtered = allData.filter(r =>
-        r.Code?.toLowerCase().includes(keyword) ||
-        r["Material name"]?.toLowerCase().includes(keyword)
-      ).slice(0, 8);
+      const filtered = allData
+        .filter(r =>
+          r.Code?.toLowerCase().includes(keyword) ||
+          r["Material name"]?.toLowerCase().includes(keyword)
+        )
+        .slice(0, 8);
 
       filtered.forEach(r => {
         const div = document.createElement("div");
@@ -258,8 +244,8 @@
       });
     });
 
-    document.getElementById("btnSearch")?.addEventListener("click", search);
-    input?.addEventListener("keypress", e => { if (e.key === "Enter") search(); });
+    document.getElementById("btnSearch").addEventListener("click", search);
+    input.addEventListener("keypress", e => { if (e.key === "Enter") search(); });
 
     function search() {
       const keyword = input.value.trim().toLowerCase();
@@ -279,16 +265,10 @@
           <p><strong>Code:</strong> ${item.Code}</p>
           <p><strong>Material:</strong> ${item["Material name"]}</p>
           <p><strong>PIC:</strong> ${item.PIC}</p>
-          <p><strong>LWH:</strong> ${item["PIC LWH"] || "—"}</p>
+          <p><strong>PIC LWH:</strong> ${item["PIC LWH"] || "-"}</p>
         </div>
       `;
     }
-
-    // 🔁 Auto reload mỗi 60 giây
-    setInterval(() => {
-      console.log("🔄 Kiểm tra dữ liệu mới...");
-      loadData();
-    }, 60000);
   </script>
 </body>
 </html>
