@@ -187,33 +187,33 @@
   <script>
     let allData = [];
 
-    // === Load JSON từ file data.txt ===
     async function loadData() {
       const status = document.getElementById("status");
       try {
         status.className = "loading";
         status.textContent = "⏳ Đang tải dữ liệu...";
 
-        // 🔹 Dành cho bản test trong VSCode (local)
         const res = await fetch("https://mindolla24.github.io/WebCheckPIC2/data.txt?ver=" + Date.now());
         const json = await res.json();
 
-        // File là mảng gốc (không có json.data)
-        allData = Array.isArray(json) ? json : json.data;
+        // ✅ Chấp nhận cả dạng array và dạng object
+        allData = Array.isArray(json) ? json : (json.data || []);
+        const lastUpdated = json.last_updated 
+          ? json.last_updated 
+          : (json[0]?.last_updated || "Không xác định");
 
         status.className = "ready flash";
-        status.innerHTML = `<b>Dữ liệu đã sẵn sàng</b><br><span style="font-size:12px;color:#666;">Cập nhật lần cuối: ${new Date().toLocaleString("vi-VN")}</span>`;
+        status.innerHTML = `<b>Dữ liệu đã sẵn sàng</b><br><span style="font-size:12px;color:#666;">Cập nhật lần cuối: ${lastUpdated}</span>`;
         setTimeout(() => status.classList.remove("flash"), 800);
-
       } catch (err) {
         console.error(err);
         status.className = "error";
-        status.textContent = "❌ Không thể tải dữ liệu (data.txt không đúng định dạng hoặc không tìm thấy).";
+        status.innerHTML = "❌ Không thể tải dữ liệu (data.txt không đúng định dạng hoặc không tìm thấy).";
       }
     }
 
     loadData();
-    setInterval(loadData, 60000); // reload mỗi 60s
+    setInterval(loadData, 60000);
 
     const input = document.getElementById("searchBox");
     const resultsBox = document.getElementById("results");
@@ -265,11 +265,10 @@
           <p><strong>Code:</strong> ${item.Code}</p>
           <p><strong>Material:</strong> ${item["Material name"]}</p>
           <p><strong>PIC:</strong> ${item.PIC}</p>
-          <p><strong>PIC LWH:</strong> ${item["PIC LWH"] || "-"}</p>
+          <p><strong>LWH:</strong> ${item["PIC LWH"] || "-"}</p>
         </div>
       `;
     }
   </script>
 </body>
 </html>
-
