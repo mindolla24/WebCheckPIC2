@@ -99,44 +99,30 @@
     #status.loading { color: #ff8c00; }
     #status.error { color: #d00000; }
 
-    .flash {
-      animation: flashFade 0.8s ease;
-    }
-    @keyframes flashFade {
-      0% { color: var(--green); opacity: 1; }
-      50% { color: #7fff7f; opacity: 0.6; }
-      100% { color: var(--green); opacity: 1; }
-    }
-
     #suggestions {
       position: absolute;
       top: 52px;
       left: 0;
       right: 0;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       border-radius: 16px;
       box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
       overflow-y: auto;
-      max-height: 200px;
+      max-height: 220px;
       text-align: left;
-      z-index: 100;
+      z-index: 10;
     }
 
     .suggestion-item {
-      padding: 12px 18px;
+      padding: 10px 18px;
       font-size: 15px;
       color: #1d1d1f;
       cursor: pointer;
       transition: 0.2s;
+      border-bottom: 1px solid rgba(0,0,0,0.05);
     }
 
     .suggestion-item:hover { background: rgba(240, 240, 240, 0.7); }
-
-    #results {
-      margin-top: 28px;
-      text-align: left;
-      animation: fadeIn 0.4s ease;
-    }
 
     .card {
       background: rgba(255, 255, 255, 0.7);
@@ -145,6 +131,9 @@
       border: 1px solid rgba(255, 255, 255, 0.4);
       padding: 22px 26px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      margin-top: 25px;
+      text-align: left;
+      animation: fadeIn 0.4s ease;
     }
 
     .card p {
@@ -168,12 +157,13 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container" id="main">
     <div class="header">Tra PIC phụ trách nguyên vật liệu</div>
 
     <div class="search-box">
-      <input type="text" id="searchBox" placeholder="Nhập code hoặc tên nguyên vật liệu..." />
+      <input type="text" id="searchBox" placeholder="Nhập code hoặc tên nguyên vật liệu..." autocomplete="off" />
       <button id="btnSearch">Tìm</button>
       <div id="suggestions"></div>
     </div>
@@ -186,53 +176,57 @@
 
   <script>
 let allData = [];
-const input = document.querySelector("input");
+const input = document.getElementById("searchBox");
 const btnSearch = document.getElementById("btnSearch");
-const resultsBox = document.querySelector(".results");
-const status = document.querySelector(".status");
-const time = document.querySelector(".time");
+const resultsBox = document.getElementById("results");
+const status = document.getElementById("status");
+const suggestionsBox = document.getElementById("suggestions");
 
+// 🔹 Load data từ GitHub API (không bị CORS)
 async function loadData() {
   try {
-    const res = await fetch("https://raw.githubusercontent.com/mindolla24/WebCheckPIC2/main/data.txt");
-    const text = await res.text();
-    const json = JSON.parse(text);
+    const res = await fetch("https://api.github.com/repos/mindolla24/WebCheckPIC2/contents/data.txt", {
+      headers: { "Accept": "application/vnd.github.v3.raw" }
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
 
+    const json = await res.json();
     allData = json.data || [];
 
-    // ===== Định dạng thời gian cập nhật theo giờ Việt Nam (GMT+7) =====
     const rawTime = json.last_updated || "";
     let formattedTime = "Không xác định";
     if (rawTime) {
       const date = new Date(rawTime);
-      const vnDate = new Date(date.getTime() + 7 * 60 * 60 * 1000); // Cộng thêm 7 tiếng
       const pad = n => n.toString().padStart(2, "0");
-      formattedTime = `${pad(vnDate.getDate())}/${pad(vnDate.getMonth() + 1)}/${vnDate.getFullYear()} – ${pad(vnDate.getHours())}:${pad(vnDate.getMinutes())}:${pad(vnDate.getSeconds())}`;
+      formattedTime = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} – ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     }
 
-    status.innerHTML = "✅ Dữ liệu đã sẵn sàng";
-    status.style.color = "green";
-    time.innerHTML = `Cập nhật lần cuối: ${formattedTime}`;
+    status.innerHTML = `✅ Dữ liệu đã sẵn sàng<br><small>Cập nhật lần cuối: ${formattedTime}</small>`;
+    status.className = "ready";
   } catch (err) {
-    status.innerHTML = "❌ Không thể tải dữ liệu (data.txt không đúng định dạng hoặc không tìm thấy).";
-    status.style.color = "red";
     console.error(err);
+    status.innerHTML = "❌ Không thể tải dữ liệu (lỗi CORS hoặc JSON).";
+    status.className = "error";
   }
 }
 
+// 🔍 Hàm tìm kiếm chính
 function search() {
   const keyword = input.value.trim().toLowerCase();
   if (!keyword) return;
 
-  const found = allData.find(r =>
-    r.Code?.toLowerCase() === keyword ||
-    r["Material name"]?.toLowerCase().includes(keyword)
+  const found = allData.find(
+    r =>
+      r.Code?.toLowerCase() === keyword ||
+      r["Material name"]?.toLowerCase().includes(keyword)
   );
 
   if (found) displayCard(found);
   else resultsBox.innerHTML = `<p>❌ Không tìm thấy kết quả phù hợp.</p>`;
+  suggestionsBox.innerHTML = "";
 }
 
+// 🧾 Hiển thị kết quả chi tiết
 function displayCard(item) {
   resultsBox.innerHTML = `
     <div class="card">
@@ -244,6 +238,35 @@ function displayCard(item) {
   `;
 }
 
+// 💡 Gợi ý khi nhập
+input.addEventListener("input", () => {
+  const keyword = input.value.trim().toLowerCase();
+  suggestionsBox.innerHTML = "";
+  if (!keyword) return;
+
+  const matches = allData.filter(r =>
+    r.Code?.toLowerCase().includes(keyword) ||
+    r["Material name"]?.toLowerCase().includes(keyword)
+  ).slice(0, 10);
+
+  matches.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "suggestion-item";
+    div.innerHTML = `<b>${item.Code}</b> – ${item["Material name"]}`;
+    div.onclick = () => {
+      input.value = item.Code;
+      suggestionsBox.innerHTML = "";
+      displayCard(item);
+    };
+    suggestionsBox.appendChild(div);
+  });
+});
+
+// Ẩn gợi ý khi click ngoài
+document.addEventListener("click", e => {
+  if (!e.target.closest(".search-box")) suggestionsBox.innerHTML = "";
+});
+
 input.addEventListener("keypress", e => { if (e.key === "Enter") search(); });
 btnSearch.addEventListener("click", search);
 
@@ -251,4 +274,3 @@ loadData();
 </script>
 </body>
 </html>
-
